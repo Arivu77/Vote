@@ -1,0 +1,130 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f4f6f8;
+}
+
+.header {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(to right, #6a1b9a, #8e24aa);
+  color: white;
+}
+
+.form-title {
+  font-size: 24px;
+}
+
+.form-description {
+  font-size: 16px;
+}
+
+.tab-bar {
+  display: flex;
+  background: #eee;
+  flex-wrap: wrap;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  background: #ddd;
+  transition: background 0.3s;
+}
+
+.tab.active {
+  background: #6a1b9a;
+  color: white;
+}
+
+.container {
+  padding: 20px;
+}
+
+.question-box, .settings-box {
+  background: white;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.question-label {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+}
+
+.option-item input[type="text"], .option-item input[type="number"] {
+  margin-right: 5px;
+}
+
+.save-btn {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: #6a1b9a;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.save-btn:hover {
+  background: #8e24aa;
+}
+
+.name-save-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.name-save-group input {
+  flex: 1;
+}
+
+/* 💥 Responsive styles for mobile screens */
+@media (max-width: 600px) {
+  .tab-bar {
+    flex-direction: column;
+  }
+
+  .tab {
+    flex: none;
+    width: 100%;
+  }
+
+  .form-title {
+    font-size: 20px;
+  }
+
+  .form-description {
+    font-size: 14px;
+  }
+
+  .name-save-group {
+    flex-direction: column;
+  }
+
+  .save-btn {
+    width: 100%;
+  }
+
+  .option-item {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}

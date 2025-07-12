@@ -1,0 +1,56 @@
+<html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Custom Form UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <div class="header">
+    <h1 id="formTitle" contenteditable="false" class="form-title">My Beautiful Form</h1>
+    <p id="formDescription" contenteditable="false" class="form-description">This is a default form description.</p>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab active" id="questionsTab">Questions</div>
+    <div class="tab" id="responsesTab">Responses</div>
+    <div class="tab" id="settingsTab">Settings</div>
+  </div>
+
+  <div id="questionsContainer" class="container"></div>
+  <div id="responsesContainer" class="container" style="display: none;"></div>
+  <div id="settingsContainer" style="display: none;" class="container">
+    <div id="passwordContainer">
+      <input type="password" id="settingsPassword" placeholder="Enter settings password">
+      <button id="checkPasswordBtn" class="save-btn">Enter Settings</button>
+    </div>
+    <div id="questionsSettings" style="display: none;"></div>
+    <div id="editControl" style="display: none; margin-top: 20px;">
+      <label>
+        <input type="checkbox" id="enableEditTitleDesc">
+        Enable editing of Title & Description
+      </label>
+      <br>
+      <label>
+        <input type="checkbox" id="enableEditQuestions">
+        Enable editing of Question Titles
+      </label>
+    </div>
+    <button id="addQuestionBtn" class="save-btn" style="display: none;">Add New Question</button>
+    <button id="saveContinueBtn" class="save-btn" style="display: none;">Save & Continue</button>
+    <button id="copyLinkBtn" class="save-btn" style="display: none;">Copy Share Link</button>
+    <button id="exportPdfBtn" class="save-btn" style="display: none;">Export Responses as PDF</button>
+    <div id="allowedNamesContainer" style="display: none; margin-top: 20px;">
+  <h3>Allowed Names</h3>
+  <input type="text" id="newAllowedName" placeholder="Enter name">
+  <button id="addAllowedNameBtn" class="save-btn">Add Name</button>
+  <ul id="allowedNamesList"></ul>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
