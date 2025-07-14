@@ -6,6 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -22,7 +28,7 @@
 
   <div id="questionsContainer" class="container"></div>
   <div id="responsesContainer" class="container" style="display: none;"></div>
-  <div id="settingsContainer" style="display: none;" class="container">
+  <div id="settingsContainer" class="container" style="display: none;">
     <div id="passwordContainer">
       <input type="password" id="settingsPassword" placeholder="Enter settings password">
       <button id="checkPasswordBtn" class="save-btn">Enter Settings</button>
@@ -30,13 +36,10 @@
     <div id="questionsSettings" style="display: none;"></div>
     <div id="editControl" style="display: none; margin-top: 20px;">
       <label>
-        <input type="checkbox" id="enableEditTitleDesc">
-        Enable editing of Title & Description
-      </label>
-      <br>
+        <input type="checkbox" id="enableEditTitleDesc"> Enable editing of Title & Description
+      </label><br>
       <label>
-        <input type="checkbox" id="enableEditQuestions">
-        Enable editing of Question Titles
+        <input type="checkbox" id="enableEditQuestions"> Enable editing of Question Titles
       </label>
     </div>
     <button id="addQuestionBtn" class="save-btn" style="display: none;">Add New Question</button>
@@ -44,10 +47,10 @@
     <button id="copyLinkBtn" class="save-btn" style="display: none;">Copy Share Link</button>
     <button id="exportPdfBtn" class="save-btn" style="display: none;">Export Responses as PDF</button>
     <div id="allowedNamesContainer" style="display: none; margin-top: 20px;">
-  <h3>Allowed Names</h3>
-  <input type="text" id="newAllowedName" placeholder="Enter name">
-  <button id="addAllowedNameBtn" class="save-btn">Add Name</button>
-  <ul id="allowedNamesList"></ul>
+      <h3>Allowed Names</h3>
+      <input type="text" id="newAllowedName" placeholder="Enter name">
+      <button id="addAllowedNameBtn" class="save-btn">Add Name</button>
+      <ul id="allowedNamesList"></ul>
     </div>
   </div>
 
