@@ -1,12 +1,26 @@
+// ✅ Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDhfLzEbMhbgKUfz7VHMquUGZCFIzOyGwQ",
+  authDomain: "student-vote-1fbc3.firebaseapp.com",
+  projectId: "student-vote-1fbc3",
+  storageBucket: "student-vote-1fbc3.appspot.com",
+  messagingSenderId: "326710956459",
+  appId: "1:326710956459:web:19e82d2fc27011be5c42ee",
+  measurementId: "G-TNG7FLE933"
+};
+
+firebase.initializeApp(firebaseConfig);
+firebase.analytics();
+const db = firebase.firestore();
+
 const urlParams = new URLSearchParams(window.location.search);
 const isRespondView = urlParams.get("view") === "respond";
 
 if (isRespondView) {
-  document.getElementById("tabSettings").style.display = "none";
+  document.getElementById("settingsTab").style.display = "none";
   document.getElementById("settingsContainer").style.display = "none";
-  activeTab = "questions";
-  renderActiveTab();
 }
+
 const questionsContainer = document.getElementById("questionsContainer");
 const responsesContainer = document.getElementById("responsesContainer");
 const settingsContainer = document.getElementById("settingsContainer");
@@ -22,6 +36,27 @@ const allowedNamesContainer = document.getElementById("allowedNamesContainer");
 const newAllowedNameInput = document.getElementById("newAllowedName");
 const addAllowedNameBtn = document.getElementById("addAllowedNameBtn");
 const allowedNamesList = document.getElementById("allowedNamesList");
+const passwordContainer = document.getElementById("passwordContainer");
+const settingsPasswordInput = document.getElementById("settingsPassword");
+const checkPasswordBtn = document.getElementById("checkPasswordBtn");
+const editControl = document.getElementById("editControl");
+const enableEditQuestions = document.getElementById("enableEditQuestions");
+const enableEditTitleDesc = document.getElementById("enableEditTitleDesc");
+const formTitle = document.getElementById("formTitle");
+const formDescription = document.getElementById("formDescription");
+
+const resetAllBtn = document.createElement("button");
+resetAllBtn.textContent = "Reset All";
+resetAllBtn.className = "save-btn";
+resetAllBtn.style.display = "none"; 
+settingsContainer.appendChild(resetAllBtn);
+
+const SETTINGS_PASSWORD = "1234";
+
+let questions = [];
+const allowedNames = [];
+let isSubmitted = false;
+let userName = "";
 
 function updateAllowedNamesList() {
   allowedNamesList.innerHTML = "";
@@ -38,37 +73,12 @@ addAllowedNameBtn.addEventListener("click", () => {
     allowedNames.push(name);
     updateAllowedNamesList();
     newAllowedNameInput.value = "";
+
+    db.collection("settings").doc("allowedNames").set({ names: allowedNames })
+      .then(() => console.log("Allowed names saved to Firestore"))
+      .catch(error => console.error("Error saving allowed names:", error));
   }
 });
-
-const passwordContainer = document.getElementById("passwordContainer");
-const settingsPasswordInput = document.getElementById("settingsPassword");
-const checkPasswordBtn = document.getElementById("checkPasswordBtn");
-
-const editControl = document.getElementById("editControl");
-const enableEditQuestions = document.getElementById("enableEditQuestions");
-const enableEditTitleDesc = document.getElementById("enableEditTitleDesc");
-
-const formTitle = document.getElementById("formTitle");
-const formDescription = document.getElementById("formDescription");
-
-const SETTINGS_PASSWORD = "1234";
-
-let questions = [
-  {
-    title: "Subjects",
-    options: [
-      { name: "Anatomy", limit: 3, count: 0 },
-      { name: "Physiology", limit: 2, count: 0 },
-    ],
-    userSelected: null
-  }
-];
-
-const allowedNames = [];
-const responses = [];
-let isSubmitted = false;
-let userName = "";
 
 enableEditTitleDesc.addEventListener("change", () => {
   formTitle.contentEditable = enableEditTitleDesc.checked ? "true" : "false";
@@ -97,17 +107,37 @@ function renderQuestions() {
   const saveBtn = document.createElement("button");
   saveBtn.textContent = "Save";
   saveBtn.className = "save-btn";
-  saveBtn.addEventListener("click", () => {
-  const enteredName = nameInput.value.trim();
-  if (!enteredName) {
-    alert("Please enter a valid name!");
-  } else if (!allowedNames.includes(enteredName)) {
-    alert("INCORRECT USER");
-  } else {
-    userName = enteredName;
-    renderQuestions();
+
+  if (userName) {
+    nameInput.disabled = true;
+    saveBtn.disabled = true;
   }
-});
+
+  saveBtn.addEventListener("click", () => {
+    const enteredName = nameInput.value.trim();
+    if (!enteredName) {
+      alert("Please enter a valid name!");
+    } else if (!allowedNames.includes(enteredName)) {
+      alert("INCORRECT USER");
+    } else {
+      userName = enteredName;
+      nameInput.disabled = true;
+      saveBtn.disabled = true;
+
+      db.collection("users").doc(userName).set({
+        name: userName,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      })
+      .then(() => {
+        console.log("User name saved to Firestore");
+        renderQuestions();
+      })
+      .catch(error => {
+        console.error("Error saving user name:", error);
+        alert("Failed to save name to database!");
+      });
+    }
+  });
 
   nameGroup.appendChild(nameInput);
   nameGroup.appendChild(saveBtn);
@@ -123,7 +153,6 @@ function renderQuestions() {
     label.className = "question-label";
     label.textContent = q.title;
     label.contentEditable = enableEditQuestions.checked ? "true" : "false";
-
     label.addEventListener("input", () => {
       q.title = label.textContent;
     });
@@ -132,48 +161,43 @@ function renderQuestions() {
     group.className = "checkbox-group";
 
     q.options.forEach((opt, idx) => {
-      if (opt.count < opt.limit || q.userSelected === idx) {
-        const wrapper = document.createElement("label");
-        wrapper.className = "option-item";
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = q.userSelected === idx;
-        checkbox.disabled = isSubmitted;
+      const remaining = opt.limit - opt.count;
+      const canSelect = (remaining > 0 || q.userSelected === idx);
 
-        checkbox.addEventListener("change", () => {
-          if (!userName) {
-            alert("Please save your name first!");
+      const wrapper = document.createElement("label");
+      wrapper.className = "option-item";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = q.userSelected === idx;
+      checkbox.disabled = isSubmitted || !canSelect;
+
+      checkbox.addEventListener("change", () => {
+        if (!userName) {
+          alert("Please save your name first!");
+          checkbox.checked = false;
+          return;
+        }
+
+        if (checkbox.checked) {
+          if (q.userSelected !== null && q.userSelected !== idx) {
+            alert("You can only select one option per question.");
             checkbox.checked = false;
             return;
           }
+          q.userSelected = idx;
+        } else {
+          q.userSelected = null;
+        }
+        renderQuestions();
+      });
 
-          if (checkbox.checked) {
-            if (q.userSelected !== null && q.userSelected !== idx) {
-              checkbox.checked = false;
-              return;
-            }
-            opt.count++;
-            q.userSelected = idx;
-            responses.push({
-              name: userName,
-              response: opt.name
-            });
-          } else {
-            opt.count--;
-            const i = responses.findIndex(r => r.name === userName && r.response === opt.name);
-            if (i !== -1) responses.splice(i, 1);
-            q.userSelected = null;
-          }
-          renderQuestions();
-        });
+      const span = document.createElement("span");
+      span.textContent = `${opt.name} (${remaining} left)`;
 
-        const span = document.createElement("span");
-        span.textContent = opt.name;
-
-        wrapper.appendChild(checkbox);
-        wrapper.appendChild(span);
-        group.appendChild(wrapper);
-      }
+      wrapper.appendChild(checkbox);
+      wrapper.appendChild(span);
+      group.appendChild(wrapper);
     });
 
     box.appendChild(label);
@@ -190,16 +214,60 @@ function renderQuestions() {
       alert("Please save your name first!");
       return;
     }
-    isSubmitted = true;
+    if (isSubmitted) return;
 
-    const thankYouPanel = document.createElement("div");
-    thankYouPanel.className = "container";
-    thankYouPanel.innerHTML = `<h2 style="color: #6a1b9a;">Thank you! Your response was submitted.</h2>`;
+    // Read latest questions from Firestore
+    db.collection("settings").doc("questions").get()
+      .then(doc => {
+        if (!doc.exists) throw new Error("Questions not found");
+        const dbQuestions = doc.data().questions;
 
-    questionsContainer.innerHTML = "";
-    questionsContainer.appendChild(thankYouPanel);
+        questions.forEach((q, qIdx) => {
+          const selectedIdx = q.userSelected;
+          if (selectedIdx !== null) {
+            if (dbQuestions[qIdx].options[selectedIdx].count < dbQuestions[qIdx].options[selectedIdx].limit) {
+              dbQuestions[qIdx].options[selectedIdx].count += 1;
+            } else {
+              throw new Error(`Slot full for ${dbQuestions[qIdx].options[selectedIdx].name}`);
+            }
+          }
+        });
 
-    renderResponses();
+        return db.collection("settings").doc("questions").set({ questions: dbQuestions });
+      })
+      .then(() => {
+        const userResponses = questions.map(q => {
+          const selectedOption = q.userSelected !== null ? q.options[q.userSelected].name : null;
+          return { question: q.title, selected: selectedOption };
+        });
+
+        return db.collection("responses").add({
+          name: userName,
+          answers: userResponses,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      })
+      .then(() => {
+        const nameIndex = allowedNames.indexOf(userName);
+        if (nameIndex !== -1) allowedNames.splice(nameIndex, 1);
+        return db.collection("settings").doc("allowedNames").set({ names: allowedNames });
+      })
+      .then(() => {
+        updateAllowedNamesList();
+        isSubmitted = true;
+
+        const thankYouPanel = document.createElement("div");
+        thankYouPanel.className = "container";
+        thankYouPanel.innerHTML = `<h2 style="color: #6a1b9a;">Thank you! Your response was submitted.</h2>`;
+        questionsContainer.innerHTML = "";
+        questionsContainer.appendChild(thankYouPanel);
+
+        renderResponses();
+      })
+      .catch(error => {
+        console.error("Error submitting:", error);
+        alert("Error: " + error.message);
+      });
   });
 
   questionsContainer.appendChild(submitBtn);
@@ -220,7 +288,6 @@ function renderSettings() {
     });
 
     const optionsDiv = document.createElement("div");
-
     q.options.forEach((opt, idx) => {
       const optionWrapper = document.createElement("div");
       optionWrapper.className = "option-item";
@@ -246,7 +313,6 @@ function renderSettings() {
       const deleteBtn = document.createElement("button");
       deleteBtn.textContent = "❌";
       deleteBtn.className = "save-btn";
-      deleteBtn.style.padding = "4px 8px";
       deleteBtn.addEventListener("click", () => {
         q.options.splice(idx, 1);
         renderSettings();
@@ -255,7 +321,6 @@ function renderSettings() {
       optionWrapper.appendChild(nameInput);
       optionWrapper.appendChild(limitInput);
       optionWrapper.appendChild(deleteBtn);
-
       optionsDiv.appendChild(optionWrapper);
     });
 
@@ -300,50 +365,133 @@ function renderSettings() {
 }
 
 function renderResponses() {
-  responsesContainer.innerHTML = "<h2>All Responses</h2>";
-  if (responses.length === 0) {
-    responsesContainer.innerHTML += "<p>No responses yet.</p>";
-    return;
-  }
+  responsesContainer.innerHTML = "<h2>All Responses (Table View)</h2>";
 
-  const table = document.createElement("table");
-  table.border = "1";
-  const headerRow = document.createElement("tr");
-  ["S.No", "Name", "Response"].forEach(text => {
-    const th = document.createElement("th");
-    th.textContent = text;
-    th.style.background = "#9b5de5";
-    th.style.color = "white";
-    headerRow.appendChild(th);
-  });
-  table.appendChild(headerRow);
+  db.collection("responses").orderBy("timestamp").get().then(snapshot => {
+    if (snapshot.empty) {
+      responsesContainer.innerHTML += "<p>No responses yet.</p>";
+      return;
+    }
 
-  responses.forEach((r, idx) => {
-    const row = document.createElement("tr");
-    [idx + 1, r.name, r.response].forEach(text => {
-      const td = document.createElement("td");
-      td.textContent = text;
-      row.appendChild(td);
+    // Prepare option names list (collect all options from questions)
+    let optionNames = new Set();
+    questions.forEach(q => {
+      q.options.forEach(opt => {
+        optionNames.add(opt.name);
+      });
     });
-    table.appendChild(row);
-  });
+    optionNames = Array.from(optionNames);
 
-  responsesContainer.appendChild(table);
+    // Create a map for each option -> list of names
+    const optionMap = {};
+    optionNames.forEach(opt => optionMap[opt] = []);
+
+    // Group responses
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.answers) {
+        data.answers.forEach(ans => {
+          const optName = ans.selected;
+          if (optName && optionMap[optName]) {
+            optionMap[optName].push(data.name);
+          }
+        });
+      }
+    });
+
+    // Find maximum number of rows needed (longest option list)
+    let maxRows = 0;
+    optionNames.forEach(opt => {
+      if (optionMap[opt].length > maxRows) {
+        maxRows = optionMap[opt].length;
+      }
+    });
+
+    // Create table
+    const table = document.createElement("table");
+    table.border = "1";
+    table.style.borderCollapse = "collapse";
+    table.style.width = "100%";
+
+    // Create header row
+    const headerRow = document.createElement("tr");
+    optionNames.forEach(opt => {
+      const th = document.createElement("th");
+      th.textContent = opt;
+      th.style.background = "#9b5de5";
+      th.style.color = "white";
+      th.style.padding = "8px";
+      headerRow.appendChild(th);
+    });
+    table.appendChild(headerRow);
+
+    // Fill rows
+    for (let i = 0; i < maxRows; i++) {
+      const row = document.createElement("tr");
+      optionNames.forEach(opt => {
+        const td = document.createElement("td");
+        td.style.padding = "8px";
+        td.style.textAlign = "center";
+        td.textContent = optionMap[opt][i] || "—";
+        row.appendChild(td);
+      });
+      table.appendChild(row);
+    }
+
+    responsesContainer.appendChild(table);
+  })
+  .catch(error => {
+    console.error("Error fetching responses:", error);
+    responsesContainer.innerHTML += "<p>Error loading responses.</p>";
+  });
 }
 
+resetAllBtn.addEventListener("click", () => {
+  if (!confirm("Are you sure you want to reset everything? This cannot be undone!")) return;
+
+  db.collection("responses").get().then(snapshot => {
+    const batch = db.batch();
+    snapshot.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    return batch.commit();
+  }).then(() => {
+    console.log("Responses cleared");
+  }).catch(err => {
+    console.error("Error clearing responses:", err);
+  });
+
+  db.collection("settings").doc("allowedNames").set({ names: [] })
+    .then(() => {
+      allowedNames.length = 0;
+      updateAllowedNamesList();
+      console.log("Allowed names reset");
+    })
+    .catch(err => {
+      console.error("Error resetting allowed names:", err);
+    });
+
+  db.collection("settings").doc("questions").set({ questions: [] })
+    .then(() => {
+      questions.length = 0;
+      renderSettings();
+      console.log("Questions reset");
+    })
+    .catch(err => {
+      console.error("Error resetting questions:", err);
+    });
+
+  alert("All data has been reset!");
+});
+
+// ✅ Tabs & Buttons
 copyLinkBtn.addEventListener("click", () => {
   const url = window.location.origin + window.location.pathname + "?view=respond";
-  navigator.clipboard.writeText(url).then(() => {
-    alert("Link copied! Share this with responders.");
-  });
+  navigator.clipboard.writeText(url).then(() => alert("Link copied! Share with responders."));
 });
 
 addQuestionBtn.addEventListener("click", () => {
-  questions.push({
-    title: "New Question",
-    options: [],
-    userSelected: null
-  });
+  questions.push({ title: "New Question", options: [], userSelected: null });
   renderSettings();
 });
 
@@ -392,68 +540,111 @@ checkPasswordBtn.addEventListener("click", () => {
     exportPdfBtn.style.display = "block";
     allowedNamesContainer.style.display = "block";
     copyLinkBtn.style.display = "block";
+    resetAllBtn.style.display = "block";
     renderSettings();
   } else {
     alert("Incorrect password!");
   }
 });
 
-addAllowedNameBtn.addEventListener("click", () => {
-  const name = newAllowedNameInput.value.trim();
-  if (name && !allowedNames.includes(name)) {
-    allowedNames.push(name);
-    updateAllowedNamesList();
-    newAllowedNameInput.value = "";
-  }
-});
-
 saveContinueBtn.addEventListener("click", () => {
-  alert("Settings saved! You can now continue.");
+  db.collection("settings").doc("questions").set({ questions })
+    .then(() => alert("Questions saved to Firestore!"))
+    .catch(err => alert("Error saving questions: " + err));
 });
 
 exportPdfBtn.addEventListener("click", () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  doc.setFontSize(16);
-  doc.text("Responses Summary", 14, 20);
-
-  const headers = ["S.No", "Name", "Response"];
-  const startX = 14;
-  const startY = 30;
-  const cellWidth = [20, 70, 70];
-  const rowHeight = 10;
-
-  doc.setFillColor(173, 216, 230);
-  doc.rect(startX, startY, cellWidth[0] + cellWidth[1] + cellWidth[2], rowHeight, "F");
-
-  let x = startX;
-  headers.forEach((header, i) => {
-    doc.setTextColor(0, 0, 0);
-    doc.text(header, x + 2, startY + 7);
-    x += cellWidth[i];
-  });
-
-  responses.forEach((r, idx) => {
-    let rowY = startY + rowHeight * (idx + 1);
-
-    x = startX;
-    for (let i = 0; i < headers.length; i++) {
-      doc.rect(x, rowY, cellWidth[i], rowHeight);
-      x += cellWidth[i];
+  db.collection("responses").orderBy("timestamp").get().then(snapshot => {
+    if (snapshot.empty) {
+      alert("No responses to export.");
+      return;
     }
 
-    x = startX;
-    doc.text(String(idx + 1), x + 2, rowY + 7);
-    x += cellWidth[0];
+    // Collect option names
+    let optionNames = new Set();
+    questions.forEach(q => {
+      q.options.forEach(opt => {
+        optionNames.add(opt.name);
+      });
+    });
+    optionNames = Array.from(optionNames);
 
-    doc.text(r.name, x + 2, rowY + 7);
-    x += cellWidth[1];
+    // Prepare map option -> names
+    const optionMap = {};
+    optionNames.forEach(opt => optionMap[opt] = []);
 
-    doc.text(r.response, x + 2, rowY + 7);
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.answers) {
+        data.answers.forEach(ans => {
+          const optName = ans.selected;
+          if (optName && optionMap[optName]) {
+            optionMap[optName].push(data.name);
+          }
+        });
+      }
+    });
+
+    // Find max rows
+    let maxRows = 0;
+    optionNames.forEach(opt => {
+      if (optionMap[opt].length > maxRows) {
+        maxRows = optionMap[opt].length;
+      }
+    });
+
+    // Build rows for the table
+    const bodyRows = [];
+    for (let i = 0; i < maxRows; i++) {
+      const row = optionNames.map(opt => optionMap[opt][i] || "—");
+      bodyRows.push(row);
+    }
+
+    // Generate PDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("Responses Summary", 14, 20);
+
+    // Using autoTable
+    doc.autoTable({
+      head: [optionNames],
+      body: bodyRows,
+      startY: 30,
+      theme: 'grid',
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [155, 93, 229] }
+    });
+
+    doc.save("responses.pdf");
+  }).catch(err => {
+    console.error("Error exporting PDF:", err);
+    alert("Error exporting PDF");
   });
-
-  doc.save("responses.pdf");
 });
 
-renderQuestions();
+// ✅ Load
+db.collection("settings").doc("allowedNames").get()
+  .then(doc => {
+    if (doc.exists && doc.data().names) {
+      allowedNames.push(...doc.data().names);
+      updateAllowedNamesList();
+    }
+    return db.collection("settings").doc("questions").get();
+  })
+  .then(doc => {
+    if (doc.exists && doc.data().questions) {
+      questions = doc.data().questions;
+
+      // ⭐ Reset userSelected for all questions so no options are checked initially
+      questions.forEach(q => {
+        q.userSelected = null;
+      });
+    }
+    renderQuestions();
+  })
+  .catch(error => {
+    console.error("Error loading settings:", error);
+    renderQuestions();
+  });
